@@ -18,14 +18,34 @@ declare global {
 }
 
 function getCloudKvCredentials() {
-  const url =
+  let url =
     process.env.UPSTASH_REDIS_REST_URL ||
     process.env.KV_REST_API_URL ||
     process.env.REDIS_REST_API_URL;
-  const token =
+  let token =
     process.env.UPSTASH_REDIS_REST_TOKEN ||
     process.env.KV_REST_API_TOKEN ||
     process.env.REDIS_REST_API_TOKEN;
+
+  // Auto-parse from Redis connection strings (e.g. REDIS_URL or UPSTASH_REDIS_URL or KV_URL)
+  if (!url || !token) {
+    const rawUri =
+      process.env.REDIS_URL ||
+      process.env.UPSTASH_REDIS_URL ||
+      process.env.KV_URL;
+
+    if (rawUri) {
+      try {
+        const parsed = new URL(rawUri);
+        if (parsed.hostname && parsed.password) {
+          url = `https://${parsed.hostname}`;
+          token = decodeURIComponent(parsed.password);
+        } else if (rawUri.startsWith("http://") || rawUri.startsWith("https://")) {
+          url = rawUri;
+        }
+      } catch {}
+    }
+  }
 
   return {
     url: url ? url.replace(/\/$/, "") : null,

@@ -92,11 +92,15 @@ export default function QuestionUploader({ examId, onImportComplete }: QuestionU
         throw new Error(data.error || "Failed to import questions.");
       }
 
-      setSuccessMsg(`Successfully imported ${data.importedCount} questions! All students taking this exam will receive them with server-side randomization.`);
+      setSuccessMsg(`✅ Successfully imported ${data.importedCount} questions! They are now live in the exam for all students.`);
       setFile(null);
       setValidationResult(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
-      onImportComplete();
+
+      // Allow user to see the success message before auto-closing
+      setTimeout(() => {
+        onImportComplete();
+      }, 1800);
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to complete import.");
     } finally {
