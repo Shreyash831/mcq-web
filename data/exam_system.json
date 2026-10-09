@@ -4,7 +4,7 @@
       "id": "admin-suhas",
       "name": "Suhas",
       "email": "suhas@exam.com",
-      "passwordHash": "$2a$10$ksKy35Tnvhetd2VkOzCn2etuiBHuwAo/dN1e56Hbkd2RhZbISNeZG",
+      "passwordHash": "$2a$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
       "createdAt": "2026-10-08T18:10:00.000Z",
       "updatedAt": "2026-10-08T18:10:00.000Z"
     }
@@ -47,8 +47,245 @@
       "updatedAt": "2026-10-08T17:50:26.094Z"
     }
   ],
-  "exams": [],
-  "questions": [],
+  "exams": [
+    {
+      "id": "exam-cpp-2026",
+      "title": "C++ Programming Examination",
+      "subject": "C++ Programming",
+      "description": "Comprehensive 20 Multiple-Choice Questions covering OOP, pointers, polymorphism, memory management, and templates.",
+      "durationMinutes": 30,
+      "totalQuestions": 20,
+      "marksPerQuestion": 1,
+      "negativeMarks": 0,
+      "shuffleQuestions": true,
+      "shuffleOptions": true,
+      "status": "active",
+      "createdAt": "2026-10-09T22:35:00.000Z",
+      "updatedAt": "2026-10-09T22:35:00.000Z"
+    }
+  ],
+  "questions": [
+    {
+      "id": "q-cpp-1",
+      "examId": "exam-cpp-2026",
+      "questionText": "Which of the following is the correct way to declare a constant integer in C++?",
+      "optionA": "int const = 10;",
+      "optionB": "const int value = 10;",
+      "optionC": "constant int value = 10;",
+      "optionD": "fixed int value = 10;",
+      "correctAnswer": "B",
+      "createdAt": "2026-10-09T22:35:00.000Z"
+    },
+    {
+      "id": "q-cpp-2",
+      "examId": "exam-cpp-2026",
+      "questionText": "What is the output of the following code? int x = 5; cout << x++ << \" \" << x;",
+      "optionA": "5 5",
+      "optionB": "6 6",
+      "optionC": "5 6",
+      "optionD": "6 5",
+      "correctAnswer": "C",
+      "createdAt": "2026-10-09T22:35:00.000Z"
+    },
+    {
+      "id": "q-cpp-3",
+      "examId": "exam-cpp-2026",
+      "questionText": "Which operator is used to access a member of an object through a pointer?",
+      "optionA": ".",
+      "optionB": "::",
+      "optionC": "&",
+      "optionD": "->",
+      "correctAnswer": "D",
+      "createdAt": "2026-10-09T22:35:00.000Z"
+    },
+    {
+      "id": "q-cpp-4",
+      "examId": "exam-cpp-2026",
+      "questionText": "Which statement about function overloading is correct?",
+      "optionA": "Functions must have different return types only",
+      "optionB": "Functions share the same name but differ in parameter lists",
+      "optionC": "Functions must be in different classes",
+      "optionD": "Overloaded functions cannot accept parameters",
+      "correctAnswer": "B",
+      "createdAt": "2026-10-09T22:35:00.000Z"
+    },
+    {
+      "id": "q-cpp-5",
+      "examId": "exam-cpp-2026",
+      "questionText": "What is the main purpose of a constructor in a class?",
+      "optionA": "To destroy an object",
+      "optionB": "To allocate every variable dynamically",
+      "optionC": "To initialize an object when it is created",
+      "optionD": "To return a value from a class",
+      "correctAnswer": "C",
+      "createdAt": "2026-10-09T22:35:00.000Z"
+    },
+    {
+      "id": "q-cpp-6",
+      "examId": "exam-cpp-2026",
+      "questionText": "Which access specifier makes class members accessible only within the class and its friends?",
+      "optionA": "public",
+      "optionB": "protected",
+      "optionC": "private",
+      "optionD": "global",
+      "correctAnswer": "C",
+      "createdAt": "2026-10-09T22:35:00.000Z"
+    },
+    {
+      "id": "q-cpp-7",
+      "examId": "exam-cpp-2026",
+      "questionText": "What is the output? int a = 10; if (a > 5) cout << \"Yes\"; else cout << \"No\";",
+      "optionA": "Yes",
+      "optionB": "No",
+      "optionC": "10",
+      "optionD": "Compilation error",
+      "correctAnswer": "A",
+      "createdAt": "2026-10-09T22:35:00.000Z"
+    },
+    {
+      "id": "q-cpp-8",
+      "examId": "exam-cpp-2026",
+      "questionText": "Which loop is guaranteed to execute its body at least once?",
+      "optionA": "for",
+      "optionB": "while",
+      "optionC": "range-based for",
+      "optionD": "do-while",
+      "correctAnswer": "D",
+      "createdAt": "2026-10-09T22:35:00.000Z"
+    },
+    {
+      "id": "q-cpp-9",
+      "examId": "exam-cpp-2026",
+      "questionText": "What does the scope resolution operator :: commonly do in C++?",
+      "optionA": "Compares two values",
+      "optionB": "Accesses a name in a specified scope",
+      "optionC": "Allocates memory",
+      "optionD": "Dereferences a pointer",
+      "correctAnswer": "B",
+      "createdAt": "2026-10-09T22:35:00.000Z"
+    },
+    {
+      "id": "q-cpp-10",
+      "examId": "exam-cpp-2026",
+      "questionText": "Which of these is a valid declaration of a reference to an integer?",
+      "optionA": "int &r;",
+      "optionB": "int r&;",
+      "optionC": "reference int r;",
+      "optionD": "int *r&;",
+      "correctAnswer": "A",
+      "createdAt": "2026-10-09T22:35:00.000Z"
+    },
+    {
+      "id": "q-cpp-11",
+      "examId": "exam-cpp-2026",
+      "questionText": "What is the output? int x = 3; cout << x * 2 + 1;",
+      "optionA": "7",
+      "optionB": "8",
+      "optionC": "9",
+      "optionD": "6",
+      "correctAnswer": "A",
+      "createdAt": "2026-10-09T22:35:00.000Z"
+    },
+    {
+      "id": "q-cpp-12",
+      "examId": "exam-cpp-2026",
+      "questionText": "Which keyword is used to create a class that inherits from another class?",
+      "optionA": "implements",
+      "optionB": "extends",
+      "optionC": ": (colon)",
+      "optionD": "inherits",
+      "correctAnswer": "C",
+      "createdAt": "2026-10-09T22:35:00.000Z"
+    },
+    {
+      "id": "q-cpp-13",
+      "examId": "exam-cpp-2026",
+      "questionText": "What is function overriding in C++ most closely associated with?",
+      "optionA": "Two functions in one scope with different parameter lists",
+      "optionB": "A derived class redefining a base-class virtual function",
+      "optionC": "Giving a variable a new value",
+      "optionD": "Defining multiple constructors only",
+      "correctAnswer": "B",
+      "createdAt": "2026-10-09T22:35:00.000Z"
+    },
+    {
+      "id": "q-cpp-14",
+      "examId": "exam-cpp-2026",
+      "questionText": "Which header is required for standard input and output using cin and cout?",
+      "optionA": "<stdio.h>",
+      "optionB": "<stdlib.h>",
+      "optionC": "<iostream>",
+      "optionD": "<fstream>",
+      "correctAnswer": "C",
+      "createdAt": "2026-10-09T22:35:00.000Z"
+    },
+    {
+      "id": "q-cpp-15",
+      "examId": "exam-cpp-2026",
+      "questionText": "What does the new operator do in C++?",
+      "optionA": "Declares a new class",
+      "optionB": "Allocates storage dynamically and returns a pointer",
+      "optionC": "Automatically deletes an object",
+      "optionD": "Converts a variable to a constant",
+      "correctAnswer": "B",
+      "createdAt": "2026-10-09T22:35:00.000Z"
+    },
+    {
+      "id": "q-cpp-16",
+      "examId": "exam-cpp-2026",
+      "questionText": "Which statement about arrays is correct?",
+      "optionA": "Array elements must all have the same type",
+      "optionB": "Array indices begin at 1 in C++",
+      "optionC": "An array can contain only characters",
+      "optionD": "Arrays automatically resize whenever an element is added",
+      "correctAnswer": "A",
+      "createdAt": "2026-10-09T22:35:00.000Z"
+    },
+    {
+      "id": "q-cpp-17",
+      "examId": "exam-cpp-2026",
+      "questionText": "What is the output? for (int i = 0; i < 3; i++) cout << i;",
+      "optionA": "123",
+      "optionB": "012",
+      "optionC": "0123",
+      "optionD": "321",
+      "correctAnswer": "B",
+      "createdAt": "2026-10-09T22:35:00.000Z"
+    },
+    {
+      "id": "q-cpp-18",
+      "examId": "exam-cpp-2026",
+      "questionText": "Which feature allows the same interface to represent different underlying forms?",
+      "optionA": "Encapsulation",
+      "optionB": "Compilation",
+      "optionC": "Polymorphism",
+      "optionD": "Assignment",
+      "correctAnswer": "C",
+      "createdAt": "2026-10-09T22:35:00.000Z"
+    },
+    {
+      "id": "q-cpp-19",
+      "examId": "exam-cpp-2026",
+      "questionText": "What is the purpose of a destructor?",
+      "optionA": "To initialize a new object",
+      "optionB": "To overload an operator",
+      "optionC": "To return a class value",
+      "optionD": "To perform cleanup when an object is destroyed",
+      "correctAnswer": "D",
+      "createdAt": "2026-10-09T22:35:00.000Z"
+    },
+    {
+      "id": "q-cpp-20",
+      "examId": "exam-cpp-2026",
+      "questionText": "Which statement correctly describes a pure virtual function?",
+      "optionA": "It is declared with = 0 in a base class",
+      "optionB": "It must always have a function body in the base class",
+      "optionC": "It cannot be overridden",
+      "optionD": "It is the same as a static function",
+      "correctAnswer": "A",
+      "createdAt": "2026-10-09T22:35:00.000Z"
+    }
+  ],
   "examAttempts": [],
   "studentAnswers": []
 }
