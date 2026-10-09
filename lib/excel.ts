@@ -308,23 +308,48 @@ export async function parseAndValidateQuestions(
     const rowNumber = idx + 1;
     const errors: string[] = [];
 
-    // Flexible key locator
-    const findField = (prefixes: string[]) => {
-      for (const [key, val] of Object.entries(item)) {
-        const cleanKey = key.toLowerCase().replace(/[^a-z0-9]/g, "");
-        if (prefixes.some((p) => cleanKey === p || cleanKey.includes(p))) {
-          return String(val || "").trim();
+    // Priority-ordered safe key locator
+    const findField = (exactKeys: string[]) => {
+      // 1. Check direct exact object properties first
+      for (const k of exactKeys) {
+        if (item[k] !== undefined && item[k] !== null && String(item[k]).trim() !== "") {
+          return String(item[k]).trim();
         }
       }
+
+      // 2. Check normalized exact key equality
+      const entries = Object.entries(item);
+      for (const target of exactKeys) {
+        const cleanTarget = target.toLowerCase().replace(/[^a-z0-9]/g, "");
+        for (const [key, val] of entries) {
+          const cleanKey = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+          if (cleanKey === cleanTarget && val !== undefined && val !== null && String(val).trim() !== "") {
+            return String(val).trim();
+          }
+        }
+      }
+
+      // 3. Safe prefix match (ignoring ambiguous keys like qnum)
+      for (const target of exactKeys) {
+        if (target.length <= 1) continue;
+        const cleanTarget = target.toLowerCase().replace(/[^a-z0-9]/g, "");
+        for (const [key, val] of entries) {
+          const cleanKey = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+          if (cleanKey !== "qnum" && cleanKey.startsWith(cleanTarget) && val !== undefined && val !== null && String(val).trim() !== "") {
+            return String(val).trim();
+          }
+        }
+      }
+
       return "";
     };
 
-    const questionText = findField(["question", "questiontext", "qtext", "query", "q"]);
-    let optionA = findField(["optiona", "opta", "choicea", "a"]);
-    let optionB = findField(["optionb", "optb", "choiceb", "b"]);
-    let optionC = findField(["optionc", "optc", "choicec", "c"]);
-    let optionD = findField(["optiond", "optd", "choiced", "d"]);
-    let correctAnswerRaw = findField(["correctanswer", "correct", "answer", "ans", "key", "correctoption"]).toUpperCase();
+    const questionText = findField(["questionText", "question", "qtext", "query", "prompt"]) || item.questionText || "";
+    let optionA = findField(["optionA", "opta", "choiceA", "choicea", "a"]) || item.optionA || "Option A";
+    let optionB = findField(["optionB", "optb", "choiceB", "choiceb", "b"]) || item.optionB || "Option B";
+    let optionC = findField(["optionC", "optc", "choiceC", "choicec", "c"]) || item.optionC || "Option C";
+    let optionD = findField(["optionD", "optd", "choiceD", "choiced", "d"]) || item.optionD || "Option D";
+    let correctAnswerRaw = (findField(["correctAnswer", "correct", "answer", "ans", "key", "correctoption"]) || item.correctAnswer || "A").toUpperCase();
 
     // Map 1/2/3/4 to A/B/C/D
     if (correctAnswerRaw === "1") correctAnswerRaw = "A";
