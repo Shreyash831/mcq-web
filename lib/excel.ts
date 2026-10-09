@@ -60,18 +60,46 @@ function extractTextFromPdfBuffer(buffer: Buffer): string {
   }
 }
 
-// Parse MCQ Questions from Freeform Text with line-by-line linear scan
+// Parse MCQ Questions and map Answer Key from end-of-document or per-question answers
 export function parseMcqFromText(fullText: string): any[] {
   if (!fullText) return [];
 
-  const lines = fullText
+  // 1. Check if there is a separate Answer Key section at the end of the document
+  const answerKeySectionRegex = /(?:^|\n)\s*(?:ANSWER\s*KEY|ANSWERS|CORRECT\s*OPTIONS|SOLUTIONS?|KEY\s*&\s*EXPLANATIONS?)\b([\s\S]*)$/i;
+  const keyMatch = fullText.match(answerKeySectionRegex);
+
+  let questionsText = fullText;
+  const answerKeyMap: Record<number, OptionKey> = {};
+
+  if (keyMatch) {
+    questionsText = fullText.substring(0, keyMatch.index).trim();
+    const answerKeyText = keyMatch[1];
+
+    // Extract all answer mappings from answer key section (e.g. "1. B", "2 - C", "3: D", "1. B — ...")
+    const itemKeyRegex = /(?:^|\n|\s)(\d+)[\.\)\:\-\s]+(?:Option\s*)?\(?([A-D1-4])\)?/gi;
+    let match;
+    while ((match = itemKeyRegex.exec(answerKeyText)) !== null) {
+      const qNum = parseInt(match[1], 10);
+      let ans = match[2].toUpperCase();
+      if (ans === "1") ans = "A";
+      else if (ans === "2") ans = "B";
+      else if (ans === "3") ans = "C";
+      else if (ans === "4") ans = "D";
+      if (["A", "B", "C", "D"].includes(ans)) {
+        answerKeyMap[qNum] = ans as OptionKey;
+      }
+    }
+  }
+
+  const lines = questionsText
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter((l) => l.length > 0 && l.length < 2000)
-    .slice(0, 3000); // Safety limit max 3000 lines
+    .slice(0, 3000);
 
   const rawQuestions: any[] = [];
   let currentQ: any = null;
+  let questionCounter = 0;
 
   const qStartRegex = /^(?:Q(?:uestion)?\.?\s*(\d+)|(\d+)[\.\)\-\:]|Problem\s*(\d+))\s*(.*)/i;
   const optARegex = /^(?:(?:\(A\)|A[\.\)\:\-]|\[A\])\s*|\bA\b[\.\:\-])\s*(.*)/i;
@@ -86,7 +114,15 @@ export function parseMcqFromText(fullText: string): any[] {
       if (!currentQ.optionB) currentQ.optionB = "Option B";
       if (!currentQ.optionC) currentQ.optionC = "Option C";
       if (!currentQ.optionD) currentQ.optionD = "Option D";
-      if (!currentQ.correctAnswer) currentQ.correctAnswer = "A";
+
+      // Apply answer from Answer Key section if available
+      const qNum = currentQ.qNum || rawQuestions.length + 1;
+      if (answerKeyMap[qNum]) {
+        currentQ.correctAnswer = answerKeyMap[qNum];
+      } else if (!currentQ.correctAnswer) {
+        currentQ.correctAnswer = "A";
+      }
+
       rawQuestions.push(currentQ);
     }
   };
@@ -148,13 +184,16 @@ export function parseMcqFromText(fullText: string): any[] {
     const qMatch = line.match(qStartRegex);
     if (qMatch) {
       pushCurrent();
+      questionCounter++;
+      const extractedNum = parseInt(qMatch[1] || qMatch[2] || qMatch[3] || String(questionCounter), 10);
       currentQ = {
+        qNum: extractedNum,
         questionText: qMatch[4] || line,
         optionA: "",
         optionB: "",
         optionC: "",
         optionD: "",
-        correctAnswer: "A",
+        correctAnswer: "",
       };
       continue;
     }
@@ -169,7 +208,7 @@ export function parseMcqFromText(fullText: string): any[] {
         currentQ.optionB += " " + line;
       } else if (!currentQ.optionD) {
         currentQ.optionC += " " + line;
-      } else if (!currentQ.correctAnswer || currentQ.correctAnswer === "A") {
+      } else if (!currentQ.correctAnswer) {
         currentQ.optionD += " " + line;
       }
     }
