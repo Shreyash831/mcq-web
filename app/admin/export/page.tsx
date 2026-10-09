@@ -1,13 +1,17 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Download, FileSpreadsheet, CheckCircle2, FileText, ArrowRight } from "lucide-react";
+import React, { useEffect, useState, useRef } from "react";
+import { Download, FileSpreadsheet, CheckCircle2, FileText, ArrowRight, Database, UploadCloud, RefreshCw, Github } from "lucide-react";
 import { Exam } from "@/types";
 
 export default function ExportPage() {
   const [exams, setExams] = useState<Exam[]>([]);
   const [selectedExamId, setSelectedExamId] = useState("");
   const [loading, setLoading] = useState(true);
+  const [restoring, setRestoring] = useState(false);
+  const [restoreMsg, setRestoreMsg] = useState("");
+  const [restoreError, setRestoreError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch("/api/admin/exams")
@@ -24,12 +28,52 @@ export default function ExportPage() {
     window.open(url, "_blank");
   };
 
+  const handleDownloadDbJson = () => {
+    window.open("/api/admin/db-backup", "_blank");
+  };
+
+  const handleRestoreDb = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setRestoring(true);
+    setRestoreMsg("");
+    setRestoreError("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/admin/db-backup", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to restore database");
+
+      setRestoreMsg(data.message || "Database restored successfully!");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+
+      // Refresh exams
+      const examRes = await fetch("/api/admin/exams");
+      if (examRes.ok) {
+        const d = await examRes.json();
+        if (d.exams) setExams(d.exams);
+      }
+    } catch (err: any) {
+      setRestoreError(err.message || "Failed to restore database file.");
+    } finally {
+      setRestoring(false);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm">
-        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Export Examination Results</h1>
+        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Export & GitHub Sync Control</h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          Generate and download institutional grading spreadsheets compatible with Excel, Google Sheets, and SIS systems.
+          Generate grading spreadsheets, download question templates, and backup or restore full database state.
         </p>
       </div>
 
@@ -112,6 +156,56 @@ export default function ExportPage() {
               </a>
             </div>
           </div>
+        </div>
+
+        {/* Full Database Backup & GitHub Sync Card */}
+        <div className="md:col-span-2 bg-gradient-to-tr from-slate-900 to-indigo-950 text-white p-6 sm:p-8 rounded-3xl shadow-xl space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center space-x-2">
+                <Database className="w-6 h-6 text-blue-400" />
+                <h3 className="text-lg font-bold">GitHub Repository Database Sync (`data/exam_system.json`)</h3>
+              </div>
+              <p className="text-xs text-slate-300 max-w-xl">
+                Download the complete JSON database file containing all exams, questions, and students to commit it directly into your GitHub repository for permanent offline and production deployments.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={handleDownloadDbJson}
+                className="inline-flex items-center space-x-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow-md transition"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download `exam_system.json`</span>
+              </button>
+
+              <label className="inline-flex items-center space-x-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-bold rounded-xl cursor-pointer transition">
+                {restoring ? <RefreshCw className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
+                <span>{restoring ? "Restoring..." : "Restore from JSON File"}</span>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json"
+                  onChange={handleRestoreDb}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          </div>
+
+          {restoreMsg && (
+            <div className="p-3 bg-emerald-500/20 border border-emerald-400/40 rounded-xl text-emerald-300 text-xs font-bold flex items-center space-x-2">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>{restoreMsg}</span>
+            </div>
+          )}
+
+          {restoreError && (
+            <div className="p-3 bg-rose-500/20 border border-rose-400/40 rounded-xl text-rose-300 text-xs font-bold">
+              {restoreError}
+            </div>
+          )}
         </div>
       </div>
     </div>
