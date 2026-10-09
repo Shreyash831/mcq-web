@@ -13,61 +13,41 @@ let memoryCache: DatabaseSchema | null = null;
 
 function ensureDbFile(): DatabaseSchema {
   try {
+    if (memoryCache && memoryCache.exams && memoryCache.exams.length > 0) {
+      return memoryCache;
+    }
+
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
 
-    if (!fs.existsSync(DB_FILE)) {
-      let initialData: DatabaseSchema;
-      if (fs.existsSync(BUNDLED_DB_FILE)) {
-        try {
-          const bundledContent = fs.readFileSync(BUNDLED_DB_FILE, "utf8");
-          initialData = JSON.parse(bundledContent);
-        } catch {
-          initialData = generateInitialData();
-        }
-      } else {
+    if (fs.existsSync(DB_FILE)) {
+      const content = fs.readFileSync(DB_FILE, "utf8");
+      if (content.trim()) {
+        const data: DatabaseSchema = JSON.parse(content);
+        memoryCache = data;
+        return data;
+      }
+    }
+
+    // Load from bundled data if DB_FILE doesn't exist yet
+    let initialData: DatabaseSchema;
+    if (fs.existsSync(BUNDLED_DB_FILE)) {
+      try {
+        const bundledContent = fs.readFileSync(BUNDLED_DB_FILE, "utf8");
+        initialData = JSON.parse(bundledContent);
+      } catch {
         initialData = generateInitialData();
       }
-
-      try {
-        fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2), "utf8");
-      } catch (e) {
-        console.warn("Could not write DB to filesystem, using memory cache:", e);
-      }
-      memoryCache = initialData;
-      return initialData;
+    } else {
+      initialData = generateInitialData();
     }
 
-    const content = fs.readFileSync(DB_FILE, "utf8");
-    if (!content.trim()) {
-      const initialData = generateInitialData();
-      try {
-        fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2), "utf8");
-      } catch {}
-      memoryCache = initialData;
-      return initialData;
-    }
-
-    const data: DatabaseSchema = JSON.parse(content);
-    let dirty = false;
-
-    if (!data.admins) {
-      data.admins = [];
-      dirty = true;
-    }
-
-    // Purge old demo admin accounts
-    const initialAdminCount = data.admins.length;
-    data.admins = data.admins.filter((a) => a.email.toLowerCase() !== "admin@exam.com");
-    if (data.admins.length !== initialAdminCount) {
-      dirty = true;
-    }
-
-    // Ensure Suhas admin account exists with hard password
-    let suhasAdmin = data.admins.find((a) => a.email.toLowerCase() === "suhas@exam.com");
+    // Ensure Suhas admin account exists
+    if (!initialData.admins) initialData.admins = [];
+    let suhasAdmin = initialData.admins.find((a) => a.email.toLowerCase() === "suhas@exam.com");
     if (!suhasAdmin) {
-      data.admins.push({
+      initialData.admins.push({
         id: "admin-suhas",
         name: "Suhas",
         email: "suhas@exam.com",
@@ -75,23 +55,16 @@ function ensureDbFile(): DatabaseSchema {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
-      dirty = true;
-    } else if (!bcrypt.compareSync("Suhas#Admin2026!$9x", suhasAdmin.passwordHash)) {
-      suhasAdmin.passwordHash = bcrypt.hashSync("Suhas#Admin2026!$9x", 10);
-      suhasAdmin.name = "Suhas";
-      dirty = true;
     }
 
-    if (dirty) {
-      try {
-        fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), "utf8");
-      } catch {}
-    }
+    try {
+      fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2), "utf8");
+    } catch {}
 
-    memoryCache = data;
-    return data;
+    memoryCache = initialData;
+    return initialData;
   } catch (error) {
-    console.error("Database initialization error, falling back to memory/initial data:", error);
+    console.error("Database initialization error, falling back to memory:", error);
     if (memoryCache) return memoryCache;
     const initial = generateInitialData();
     memoryCache = initial;
@@ -109,6 +82,13 @@ function writeDb(data: DatabaseSchema): void {
   } catch (error) {
     console.warn("writeDb file write warning (using memory state):", error);
   }
+
+  // Also try writing to bundled location if writable
+  try {
+    if (!isVercel && fs.existsSync(path.dirname(BUNDLED_DB_FILE))) {
+      fs.writeFileSync(BUNDLED_DB_FILE, JSON.stringify(data, null, 2), "utf8");
+    }
+  } catch {}
 }
 
 export const db = {
