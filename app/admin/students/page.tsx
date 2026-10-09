@@ -110,14 +110,14 @@ function StudentsTable() {
           </p>
         </div>
 
-        <Link
-          href={`/api/admin/export${examFilter ? `?examId=${examFilter}` : ""}`}
+        <a
+          href={`/api/admin/export?format=xlsx${examFilter ? `&examId=${examFilter}` : ""}`}
           download
-          className="inline-flex items-center space-x-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-md transition"
+          className="inline-flex items-center space-x-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-500/20 transition"
         >
-          <Download className="w-4 h-4" />
-          <span>Export Results CSV</span>
-        </Link>
+          <FileSpreadsheet className="w-4 h-4" />
+          <span>Export Excel (.xlsx)</span>
+        </a>
       </div>
 
       {actionMsg && (

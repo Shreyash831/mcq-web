@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { Download, FileSpreadsheet, CheckCircle2, FileText, ArrowRight, Database, UploadCloud, RefreshCw, Github } from "lucide-react";
+import { Download, FileSpreadsheet, CheckCircle2, FileText, ArrowRight, Database, UploadCloud, RefreshCw, File } from "lucide-react";
 import { Exam } from "@/types";
 
 export default function ExportPage() {
@@ -23,8 +23,13 @@ export default function ExportPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleDownloadResults = () => {
-    const url = `/api/admin/export${selectedExamId ? `?examId=${selectedExamId}` : ""}`;
+  const handleDownloadExcel = () => {
+    const url = `/api/admin/export?format=xlsx${selectedExamId ? `&examId=${selectedExamId}` : ""}`;
+    window.open(url, "_blank");
+  };
+
+  const handleDownloadCsv = () => {
+    const url = `/api/admin/export?format=csv${selectedExamId ? `&examId=${selectedExamId}` : ""}`;
     window.open(url, "_blank");
   };
 
@@ -71,9 +76,9 @@ export default function ExportPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm">
-        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Export & GitHub Sync Control</h1>
+        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Export Student Examination Results</h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          Generate grading spreadsheets, download question templates, and backup or restore full database state.
+          Download formatted Excel spreadsheets (.xlsx) and CSV files for all student candidates, marks, and grades.
         </p>
       </div>
 
@@ -81,13 +86,13 @@ export default function ExportPage() {
         {/* Results Export Card */}
         <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6 flex flex-col justify-between">
           <div className="space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <Download className="w-6 h-6" />
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <FileSpreadsheet className="w-6 h-6" />
             </div>
 
-            <h3 className="text-lg font-bold text-slate-900">Student Performance Spreadsheet</h3>
+            <h3 className="text-lg font-bold text-slate-900">Student Results Excel File (.xlsx)</h3>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Export student names, roll numbers, divisions, calculated scores, percentage, correct/incorrect breakdowns, and submission timestamps.
+              Export student names, roll numbers, divisions, calculated scores, percentage, correct/incorrect breakdowns, and submission timestamps directly into Microsoft Excel.
             </p>
 
             <div>
@@ -97,7 +102,7 @@ export default function ExportPage() {
               <select
                 value={selectedExamId}
                 onChange={(e) => setSelectedExamId(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="">All Examinations (Consolidated Export)</option>
                 {exams.map((ex) => (
@@ -109,20 +114,30 @@ export default function ExportPage() {
             </div>
           </div>
 
-          <button
-            onClick={handleDownloadResults}
-            className="w-full inline-flex items-center justify-center space-x-2 py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 transition"
-          >
-            <Download className="w-4 h-4" />
-            <span>Download Results (CSV)</span>
-          </button>
+          <div className="space-y-2.5 pt-2">
+            <button
+              onClick={handleDownloadExcel}
+              className="w-full inline-flex items-center justify-center space-x-2 py-3 px-6 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-500/20 transition transform active:scale-95"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Download Excel File (.xlsx)</span>
+            </button>
+
+            <button
+              onClick={handleDownloadCsv}
+              className="w-full inline-flex items-center justify-center space-x-2 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Download Plain CSV</span>
+            </button>
+          </div>
         </div>
 
         {/* Question Template Downloads Card */}
         <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6 flex flex-col justify-between">
           <div className="space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <FileSpreadsheet className="w-6 h-6" />
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <Download className="w-6 h-6" />
             </div>
 
             <h3 className="text-lg font-bold text-slate-900">Question Import Templates</h3>
@@ -134,7 +149,7 @@ export default function ExportPage() {
               <a
                 href="/api/admin/exams/sample/template?format=csv"
                 download="mcq_question_template.csv"
-                className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/40 text-xs font-semibold text-slate-700 transition"
+                className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 text-xs font-semibold text-slate-700 transition"
               >
                 <span className="flex items-center space-x-2">
                   <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
@@ -146,10 +161,10 @@ export default function ExportPage() {
               <a
                 href="/api/admin/exams/sample/template?format=json"
                 download="mcq_question_template.json"
-                className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/40 text-xs font-semibold text-slate-700 transition"
+                className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 text-xs font-semibold text-slate-700 transition"
               >
                 <span className="flex items-center space-x-2">
-                  <FileText className="w-4 h-4 text-emerald-600" />
+                  <FileText className="w-4 h-4 text-blue-600" />
                   <span>Download Sample JSON Template</span>
                 </span>
                 <ArrowRight className="w-3.5 h-3.5 text-slate-400" />

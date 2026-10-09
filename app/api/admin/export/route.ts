@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getAdminSession } from "@/lib/auth";
-import { exportResultsToCsv } from "@/lib/excel";
+import { exportResultsToCsv, exportResultsToExcel } from "@/lib/excel";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url);
     const examId = searchParams.get("examId");
+    const format = (searchParams.get("format") || "xlsx").toLowerCase();
 
     const attempts = db.attempts.getAll();
     const students = db.students.getAll();
@@ -50,12 +51,25 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    const csvData = exportResultsToCsv(exportRows);
+    const dateStr = new Date().toISOString().slice(0, 10);
 
+    // 1. Output Excel (.xlsx) format
+    if (format === "xlsx" || format === "excel") {
+      const excelBuffer = exportResultsToExcel(exportRows);
+      return new NextResponse(excelBuffer, {
+        headers: {
+          "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "Content-Disposition": `attachment; filename="student_examination_results_${dateStr}.xlsx"`,
+        },
+      });
+    }
+
+    // 2. Output CSV format
+    const csvData = exportResultsToCsv(exportRows);
     return new NextResponse(csvData, {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="examination_results_${new Date().toISOString().slice(0, 10)}.csv"`,
+        "Content-Disposition": `attachment; filename="student_examination_results_${dateStr}.csv"`,
       },
     });
   } catch (error: any) {

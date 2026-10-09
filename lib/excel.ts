@@ -464,6 +464,66 @@ export function getSampleJsonTemplate(): string {
   return JSON.stringify(sample, null, 2);
 }
 
+// Export student results to Excel Buffer (.xlsx)
+export function exportResultsToExcel(data: {
+  studentName: string;
+  rollNumber: string;
+  division: string;
+  examTitle: string;
+  status: string;
+  totalQuestions: number;
+  correctAnswers: number;
+  incorrectAnswers: number;
+  unansweredQuestions: number;
+  marksObtained: number;
+  totalPossibleMarks: number;
+  percentage: number;
+  submittedAt: string;
+}[]): Buffer {
+  const rows = data.map((item, index) => ({
+    "Sr. No.": index + 1,
+    "Candidate Name": item.studentName,
+    "Roll Number": item.rollNumber,
+    "Division": item.division,
+    "Exam Title": item.examTitle,
+    "Status": item.status === "submitted" ? "Completed" : item.status === "expired" ? "Time Expired" : item.status,
+    "Total Questions": item.totalQuestions,
+    "Correct Answers": item.correctAnswers,
+    "Incorrect Answers": item.incorrectAnswers,
+    "Unanswered": item.unansweredQuestions,
+    "Marks Obtained": item.marksObtained,
+    "Maximum Marks": item.totalPossibleMarks,
+    "Percentage (%)": `${item.percentage}%`,
+    "Submission Timestamp": item.submittedAt ? new Date(item.submittedAt).toLocaleString() : "Not Submitted",
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(rows);
+
+  // Formatting column widths for professional Excel appearance
+  worksheet["!cols"] = [
+    { wch: 8 },  // Sr No
+    { wch: 25 }, // Candidate Name
+    { wch: 14 }, // Roll Number
+    { wch: 10 }, // Division
+    { wch: 30 }, // Exam Title
+    { wch: 16 }, // Status
+    { wch: 15 }, // Total Questions
+    { wch: 15 }, // Correct Answers
+    { wch: 15 }, // Incorrect Answers
+    { wch: 15 }, // Unanswered
+    { wch: 15 }, // Marks Obtained
+    { wch: 15 }, // Max Marks
+    { wch: 15 }, // Percentage
+    { wch: 25 }, // Submission Timestamp
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Student Results");
+
+  const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+  return Buffer.from(buffer);
+}
+
 // Export student results to CSV string
 export function exportResultsToCsv(data: {
   studentName: string;
@@ -481,22 +541,24 @@ export function exportResultsToCsv(data: {
   submittedAt: string;
 }[]): string {
   const headers = [
-    "Student Name",
+    "Sr No",
+    "Candidate Name",
     "Roll Number",
     "Division",
     "Exam Title",
     "Status",
     "Total Questions",
-    "Correct",
-    "Incorrect",
+    "Correct Answers",
+    "Incorrect Answers",
     "Unanswered",
     "Marks Obtained",
-    "Total Marks",
+    "Maximum Marks",
     "Percentage (%)",
-    "Submission Time",
+    "Submission Timestamp",
   ];
 
-  const rows = data.map((item) => [
+  const rows = data.map((item, index) => [
+    index + 1,
     `"${item.studentName.replace(/"/g, '""')}"`,
     `"${item.rollNumber}"`,
     `"${item.division}"`,

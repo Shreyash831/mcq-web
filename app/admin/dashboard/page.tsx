@@ -201,8 +201,8 @@ export default function AdminDashboardPage() {
             href="/admin/export"
             className="inline-flex items-center space-x-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition"
           >
-            <Download className="w-4 h-4" />
-            <span>Export CSV</span>
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            <span>Export Excel (.xlsx)</span>
           </Link>
         </div>
       </div>
