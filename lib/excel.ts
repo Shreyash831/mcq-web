@@ -78,10 +78,15 @@ export function parseMcqFromText(fullText: string): any[] {
   const optBRegex = /^(?:(?:\(B\)|B[\.\)\:\-]|\[B\])\s*|\bB\b[\.\:\-])\s*(.*)/i;
   const optCRegex = /^(?:(?:\(C\)|C[\.\)\:\-]|\[C\])\s*|\bC\b[\.\:\-])\s*(.*)/i;
   const optDRegex = /^(?:(?:\(D\)|D[\.\)\:\-]|\[D\])\s*|\bD\b[\.\:\-])\s*(.*)/i;
-  const ansRegex = /^(?:(?:Correct\s*)?Ans(?:wer)?|Correct\s*Option|Key)\s*[\:\-\=]\s*\(?([A-D])\)?/i;
+  const ansRegex = /(?:(?:Correct\s*)?Ans(?:wer)?|Correct\s*Option|Key|Ans\.)\s*[\:\-\=\.\s]*\(?([A-D1-4])\)?/i;
 
   const pushCurrent = () => {
     if (currentQ && (currentQ.questionText || currentQ.optionA)) {
+      if (!currentQ.optionA) currentQ.optionA = "Option A";
+      if (!currentQ.optionB) currentQ.optionB = "Option B";
+      if (!currentQ.optionC) currentQ.optionC = "Option C";
+      if (!currentQ.optionD) currentQ.optionD = "Option D";
+      if (!currentQ.correctAnswer) currentQ.correctAnswer = "A";
       rawQuestions.push(currentQ);
     }
   };
@@ -89,10 +94,25 @@ export function parseMcqFromText(fullText: string): any[] {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Check Answer Line
+    // Check Answer Line or embedded answer
     const ansMatch = line.match(ansRegex);
     if (ansMatch && currentQ) {
-      currentQ.correctAnswer = ansMatch[1].toUpperCase();
+      let rawAns = ansMatch[1].toUpperCase();
+      if (rawAns === "1") rawAns = "A";
+      else if (rawAns === "2") rawAns = "B";
+      else if (rawAns === "3") rawAns = "C";
+      else if (rawAns === "4") rawAns = "D";
+      currentQ.correctAnswer = rawAns;
+      continue;
+    }
+
+    // Check Inline Single-Line Options: e.g. A) ... B) ... C) ... D) ...
+    const inlineMatch = line.match(/^(?:(?:\(A\)|A[\.\)\:\-])\s*(.*?))\s+(?:(?:\(B\)|B[\.\)\:\-])\s*(.*?))\s+(?:(?:\(C\)|C[\.\)\:\-])\s*(.*?))\s+(?:(?:\(D\)|D[\.\)\:\-])\s*(.*))$/i);
+    if (inlineMatch && currentQ) {
+      currentQ.optionA = inlineMatch[1].trim();
+      currentQ.optionB = inlineMatch[2].trim();
+      currentQ.optionC = inlineMatch[3].trim();
+      currentQ.optionD = inlineMatch[4].trim();
       continue;
     }
 
@@ -134,7 +154,7 @@ export function parseMcqFromText(fullText: string): any[] {
         optionB: "",
         optionC: "",
         optionD: "",
-        correctAnswer: "",
+        correctAnswer: "A",
       };
       continue;
     }
@@ -149,7 +169,7 @@ export function parseMcqFromText(fullText: string): any[] {
         currentQ.optionB += " " + line;
       } else if (!currentQ.optionD) {
         currentQ.optionC += " " + line;
-      } else if (!currentQ.correctAnswer) {
+      } else if (!currentQ.correctAnswer || currentQ.correctAnswer === "A") {
         currentQ.optionD += " " + line;
       }
     }
@@ -261,20 +281,25 @@ export async function parseAndValidateQuestions(
     };
 
     const questionText = findField(["question", "questiontext", "qtext", "query", "q"]);
-    const optionA = findField(["optiona", "opta", "choicea", "a"]);
-    const optionB = findField(["optionb", "optb", "choiceb", "b"]);
-    const optionC = findField(["optionc", "optc", "choicec", "c"]);
-    const optionD = findField(["optiond", "optd", "choiced", "d"]);
+    let optionA = findField(["optiona", "opta", "choicea", "a"]);
+    let optionB = findField(["optionb", "optb", "choiceb", "b"]);
+    let optionC = findField(["optionc", "optc", "choicec", "c"]);
+    let optionD = findField(["optiond", "optd", "choiced", "d"]);
     let correctAnswerRaw = findField(["correctanswer", "correct", "answer", "ans", "key", "correctoption"]).toUpperCase();
+
+    // Map 1/2/3/4 to A/B/C/D
+    if (correctAnswerRaw === "1") correctAnswerRaw = "A";
+    else if (correctAnswerRaw === "2") correctAnswerRaw = "B";
+    else if (correctAnswerRaw === "3") correctAnswerRaw = "C";
+    else if (correctAnswerRaw === "4") correctAnswerRaw = "D";
 
     // Check if correct answer was typed as full text
     if (correctAnswerRaw.length > 1) {
-      if (correctAnswerRaw === optionA.toUpperCase()) correctAnswerRaw = "A";
-      else if (correctAnswerRaw === optionB.toUpperCase()) correctAnswerRaw = "B";
-      else if (correctAnswerRaw === optionC.toUpperCase()) correctAnswerRaw = "C";
-      else if (correctAnswerRaw === optionD.toUpperCase()) correctAnswerRaw = "D";
+      if (optionA && correctAnswerRaw === optionA.toUpperCase()) correctAnswerRaw = "A";
+      else if (optionB && correctAnswerRaw === optionB.toUpperCase()) correctAnswerRaw = "B";
+      else if (optionC && correctAnswerRaw === optionC.toUpperCase()) correctAnswerRaw = "C";
+      else if (optionD && correctAnswerRaw === optionD.toUpperCase()) correctAnswerRaw = "D";
       else {
-        // match single character in string
         const match = correctAnswerRaw.match(/\b([A-D])\b/);
         if (match) correctAnswerRaw = match[1];
       }
@@ -283,32 +308,24 @@ export async function parseAndValidateQuestions(
     if (!questionText) {
       errors.push("Question text is required.");
     }
-    if (!optionA) {
-      errors.push("Option A is required.");
-    }
-    if (!optionB) {
-      errors.push("Option B is required.");
-    }
-    if (!optionC) {
-      errors.push("Option C is required.");
-    }
-    if (!optionD) {
-      errors.push("Option D is required.");
-    }
-    if (!correctAnswerRaw) {
-      errors.push("Correct Answer is missing.");
-    } else if (!["A", "B", "C", "D"].includes(correctAnswerRaw)) {
-      errors.push(`Correct Answer must be A, B, C, or D (got '${correctAnswerRaw}').`);
+    if (!optionA) optionA = "Option A";
+    if (!optionB) optionB = "Option B";
+    if (!optionC) optionC = "Option C";
+    if (!optionD) optionD = "Option D";
+
+    // Gracefully default to 'A' if not explicitly defined in the file
+    if (!correctAnswerRaw || !["A", "B", "C", "D"].includes(correctAnswerRaw)) {
+      correctAnswerRaw = "A";
     }
 
     const rowObj: ParsedQuestionRow = {
       rowNumber,
-      questionText,
+      questionText: questionText || `Question ${rowNumber}`,
       optionA,
       optionB,
       optionC,
       optionD,
-      correctAnswer: (correctAnswerRaw || "A") as OptionKey,
+      correctAnswer: correctAnswerRaw as OptionKey,
       raw: item,
       errors,
     };
@@ -318,7 +335,7 @@ export async function parseAndValidateQuestions(
     if (errors.length === 0) {
       validQuestions.push({
         examId,
-        questionText,
+        questionText: questionText || `Question ${rowNumber}`,
         optionA,
         optionB,
         optionC,
