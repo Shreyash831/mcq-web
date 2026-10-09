@@ -1,6 +1,5 @@
 import fs from "fs";
 import path from "path";
-import bcrypt from "bcryptjs";
 import { DatabaseSchema, Admin, Student, Exam, Question, ExamAttempt, StudentAnswer } from "@/types";
 import { generateInitialData } from "./seed-data";
 
@@ -15,32 +14,123 @@ const SUHAS_PASSWORD_HASH = "$2a$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3v
 // Global cache attached to Node runtime globalThis to persist across warm serverless invocations
 declare global {
   var __examDbCache: DatabaseSchema | undefined;
-  var __kvSyncPromise: Promise<void> | undefined;
+  var __lastKvSyncTime: number | undefined;
 }
 
-const KV_URL = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-const KV_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+function getCloudKvCredentials() {
+  const url =
+    process.env.UPSTASH_REDIS_REST_URL ||
+    process.env.KV_REST_API_URL ||
+    process.env.REDIS_REST_API_URL;
+  const token =
+    process.env.UPSTASH_REDIS_REST_TOKEN ||
+    process.env.KV_REST_API_TOKEN ||
+    process.env.REDIS_REST_API_TOKEN;
 
-// Async cloud sync for Upstash / Vercel KV
-async function syncToCloudKv(data: DatabaseSchema): Promise<void> {
-  if (!KV_URL || !KV_TOKEN) return;
+  return {
+    url: url ? url.replace(/\/$/, "") : null,
+    token: token || null,
+  };
+}
+
+export function isCloudPersistenceActive(): boolean {
+  const { url, token } = getCloudKvCredentials();
+  return Boolean(url && token);
+}
+
+// Guaranteed Cloud KV Sync (Upstash Redis / Vercel KV)
+export async function syncToCloudKv(data: DatabaseSchema): Promise<boolean> {
+  const { url, token } = getCloudKvCredentials();
+  if (!url || !token) return false;
+
   try {
-    await fetch(`${KV_URL}/set/exam_system_db`, {
+    const payloadString = JSON.stringify(data);
+    const res = await fetch(`${url}/set/exam_system_db`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${KV_TOKEN}`,
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(data),
+      body: payloadString,
+      cache: "no-store",
     });
+
+    if (res.ok) {
+      globalThis.__lastKvSyncTime = Date.now();
+      return true;
+    }
+    return false;
   } catch (err) {
     console.warn("Cloud KV write warning:", err);
+    return false;
+  }
+}
+
+export async function syncFromCloud(): Promise<DatabaseSchema> {
+  const { url, token } = getCloudKvCredentials();
+  if (url && token) {
+    try {
+      const res = await fetch(`${url}/get/exam_system_db`, {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.result) {
+          const parsed: DatabaseSchema =
+            typeof json.result === "string" ? JSON.parse(json.result) : json.result;
+
+          if (parsed && Array.isArray(parsed.exams)) {
+            // Ensure Suhas admin account exists
+            ensureAdminAccount(parsed);
+            globalThis.__examDbCache = parsed;
+            globalThis.__lastKvSyncTime = Date.now();
+
+            try {
+              if (!fs.existsSync(DATA_DIR)) {
+                fs.mkdirSync(DATA_DIR, { recursive: true });
+              }
+              fs.writeFileSync(DB_FILE, JSON.stringify(parsed, null, 2), "utf8");
+            } catch {}
+
+            return parsed;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Cloud KV read warning:", err);
+    }
+  }
+
+  return ensureDbFile();
+}
+
+function ensureAdminAccount(data: DatabaseSchema): void {
+  if (!data.admins) data.admins = [];
+  let suhasAdmin = data.admins.find((a) => a.email.toLowerCase() === "suhas@exam.com");
+  if (!suhasAdmin) {
+    data.admins.push({
+      id: "admin-suhas",
+      name: "Suhas",
+      email: "suhas@exam.com",
+      passwordHash: SUHAS_PASSWORD_HASH,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+  } else {
+    suhasAdmin.passwordHash = SUHAS_PASSWORD_HASH;
+    suhasAdmin.name = "Suhas";
   }
 }
 
 function ensureDbFile(): DatabaseSchema {
   try {
-    if (globalThis.__examDbCache && globalThis.__examDbCache.exams && globalThis.__examDbCache.exams.length > 0) {
+    if (
+      globalThis.__examDbCache &&
+      Array.isArray(globalThis.__examDbCache.exams) &&
+      globalThis.__examDbCache.exams.length > 0
+    ) {
       return globalThis.__examDbCache;
     }
 
@@ -52,6 +142,7 @@ function ensureDbFile(): DatabaseSchema {
       const content = fs.readFileSync(DB_FILE, "utf8");
       if (content.trim()) {
         const data: DatabaseSchema = JSON.parse(content);
+        ensureAdminAccount(data);
         globalThis.__examDbCache = data;
         return data;
       }
@@ -70,22 +161,7 @@ function ensureDbFile(): DatabaseSchema {
       initialData = generateInitialData();
     }
 
-    // Ensure Suhas admin account exists with precomputed hash
-    if (!initialData.admins) initialData.admins = [];
-    let suhasAdmin = initialData.admins.find((a) => a.email.toLowerCase() === "suhas@exam.com");
-    if (!suhasAdmin) {
-      initialData.admins.push({
-        id: "admin-suhas",
-        name: "Suhas",
-        email: "suhas@exam.com",
-        passwordHash: SUHAS_PASSWORD_HASH,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-    } else {
-      suhasAdmin.passwordHash = SUHAS_PASSWORD_HASH;
-      suhasAdmin.name = "Suhas";
-    }
+    ensureAdminAccount(initialData);
 
     try {
       fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2), "utf8");
@@ -97,12 +173,14 @@ function ensureDbFile(): DatabaseSchema {
     console.error("Database initialization error, falling back to memory:", error);
     if (globalThis.__examDbCache) return globalThis.__examDbCache;
     const initial = generateInitialData();
+    ensureAdminAccount(initial);
     globalThis.__examDbCache = initial;
     return initial;
   }
 }
 
 function writeDb(data: DatabaseSchema): void {
+  ensureAdminAccount(data);
   globalThis.__examDbCache = data;
 
   try {
@@ -114,12 +192,7 @@ function writeDb(data: DatabaseSchema): void {
     console.warn("writeDb file write warning:", error);
   }
 
-  // Sync to Cloud KV in background if configured
-  if (KV_URL && KV_TOKEN) {
-    syncToCloudKv(data).catch(() => {});
-  }
-
-  // Also try writing to bundled location if writable
+  // Also try writing to bundled location if local development
   try {
     if (!isVercel && fs.existsSync(path.dirname(BUNDLED_DB_FILE))) {
       fs.writeFileSync(BUNDLED_DB_FILE, JSON.stringify(data, null, 2), "utf8");
@@ -128,12 +201,26 @@ function writeDb(data: DatabaseSchema): void {
 }
 
 export const db = {
+  async syncFromCloud(): Promise<DatabaseSchema> {
+    return syncFromCloud();
+  },
+
+  async saveChanges(): Promise<boolean> {
+    const data = ensureDbFile();
+    return syncToCloudKv(data);
+  },
+
+  isCloudConnected(): boolean {
+    return isCloudPersistenceActive();
+  },
+
   getRawData(): DatabaseSchema {
     return ensureDbFile();
   },
 
   resetToSeed(): DatabaseSchema {
     const fresh = generateInitialData();
+    ensureAdminAccount(fresh);
     writeDb(fresh);
     return fresh;
   },

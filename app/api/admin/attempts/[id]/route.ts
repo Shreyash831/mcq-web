@@ -3,12 +3,17 @@ import { db } from "@/lib/db";
 import { getAdminSession } from "@/lib/auth";
 import { DetailedAttemptReport, DetailedStudentAnswerView, OptionKey } from "@/types";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getAdminSession(req);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    await db.syncFromCloud();
 
     const attempt = db.attempts.findById(params.id);
     if (!attempt) {
@@ -35,7 +40,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       if (!q) return;
 
       const savedAnswer = answersMap.get(qId);
-      const normalizedChoice = savedAnswer?.normalizedAnswer; // A, B, C, D in canonical terms
+      const normalizedChoice = savedAnswer?.normalizedAnswer;
       const originalOptions: Record<OptionKey, string> = {
         A: q.optionA,
         B: q.optionB,
@@ -92,11 +97,13 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    await db.syncFromCloud();
     const deleted = db.attempts.delete(params.id);
     if (!deleted) {
       return NextResponse.json({ error: "Attempt not found" }, { status: 404 });
     }
 
+    await db.saveChanges();
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Failed to delete attempt" }, { status: 500 });

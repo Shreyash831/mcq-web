@@ -170,12 +170,19 @@ export default function AdminDashboardPage() {
       {/* Top Banner with Dynamic Live Indicator */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm">
         <div>
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Examination Control Dashboard</h1>
-            <span className="flex items-center space-x-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>Live Synced</span>
-            </span>
+            {data?.stats?.isCloudConnected !== false ? (
+              <span className="flex items-center space-x-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Cloud Storage Active</span>
+              </span>
+            ) : (
+              <span className="flex items-center space-x-1 text-[11px] font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
+                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                <span>Serverless Memory Mode</span>
+              </span>
+            )}
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Upload PDF/Excel question papers to instantly generate dynamic examinations for all students.
@@ -199,6 +206,22 @@ export default function AdminDashboardPage() {
           </Link>
         </div>
       </div>
+
+      {/* Cloud Persistence Guide Banner if not connected */}
+      {data?.stats?.isCloudConnected === false && (
+        <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl text-xs text-amber-900 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 font-bold text-amber-900">
+              <span>⚠️ Permanent Storage Configuration (Recommended for Vercel)</span>
+            </div>
+            <span className="text-[11px] bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded-full font-bold">1-Click Free Setup</span>
+          </div>
+          <p className="text-amber-800 leading-relaxed text-[11px]">
+            To ensure tests and student responses are preserved permanently across all Vercel serverless containers:
+            Go to your <strong>Vercel Dashboard</strong> → <strong>Storage</strong> tab → Click <strong>Create Upstash Redis</strong> → Connect it to this project (or add <code>UPSTASH_REDIS_REST_URL</code> & <code>UPSTASH_REDIS_REST_TOKEN</code> in Environment Variables).
+          </p>
+        </div>
+      )}
 
       {/* Metrics Cards Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">

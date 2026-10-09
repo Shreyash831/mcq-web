@@ -12,12 +12,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    await db.syncFromCloud();
+
     const { searchParams } = new URL(req.url);
     const examId = searchParams.get("examId");
     const division = searchParams.get("division");
     const status = searchParams.get("status");
     const search = searchParams.get("search")?.toLowerCase().trim() || "";
-    const sortBy = searchParams.get("sortBy") || "date"; // 'date' | 'marks' | 'name' | 'percentage'
+    const sortBy = searchParams.get("sortBy") || "date";
     const sortOrder = searchParams.get("sortOrder") || "desc";
 
     const allAttempts = db.attempts.getAll();

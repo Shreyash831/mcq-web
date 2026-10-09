@@ -3,12 +3,17 @@ import { db } from "@/lib/db";
 import { getAdminSession } from "@/lib/auth";
 import { exportResultsToCsv } from "@/lib/excel";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: NextRequest) {
   try {
     const session = await getAdminSession(req);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    await db.syncFromCloud();
 
     const { searchParams } = new URL(req.url);
     const examId = searchParams.get("examId");

@@ -4,12 +4,17 @@ import { getStudentSession } from "@/lib/auth";
 import { isAttemptExpired, resolveNormalizedOption } from "@/lib/exam-engine";
 import { OptionKey } from "@/types";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getStudentSession(req);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized session" }, { status: 401 });
     }
+
+    await db.syncFromCloud();
 
     const { attemptId, questionId, selectedAnswer, isFlagged } = await req.json();
 
@@ -65,6 +70,7 @@ export async function POST(req: NextRequest) {
       isFlagged: typeof isFlagged === "boolean" ? isFlagged : undefined,
     });
 
+    await db.saveChanges();
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Failed to save answer" }, { status: 500 });

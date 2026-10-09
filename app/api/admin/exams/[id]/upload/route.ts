@@ -3,12 +3,17 @@ import { db } from "@/lib/db";
 import { getAdminSession } from "@/lib/auth";
 import { parseAndValidateQuestions } from "@/lib/excel";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getAdminSession(req);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    await db.syncFromCloud();
 
     const exam = db.exams.findById(params.id);
     if (!exam) {
@@ -53,6 +58,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       }
 
       const imported = db.questions.bulkCreate(parseResult.validQuestions);
+      await db.saveChanges();
 
       return NextResponse.json({
         success: true,

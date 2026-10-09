@@ -12,6 +12,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    await db.syncFromCloud();
+
     const exams = db.exams.getAll();
     const students = db.students.getAll();
     const attempts = db.attempts.getAll();
@@ -55,6 +57,7 @@ export async function GET(req: NextRequest) {
         highestScore,
       },
       recentAttempts,
+      isCloudConnected: db.isCloudConnected(),
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Failed to fetch stats" }, { status: 500 });

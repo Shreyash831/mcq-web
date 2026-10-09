@@ -6,6 +6,7 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
+    await db.syncFromCloud();
     const allExams = db.exams.getAll();
     const activeExams = allExams
       .filter((e) => e.status === "active")

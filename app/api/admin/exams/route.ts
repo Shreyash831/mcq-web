@@ -13,8 +13,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    await db.syncFromCloud();
     const exams = db.exams.getAll();
-    return NextResponse.json({ exams });
+    return NextResponse.json({ exams, isCloudConnected: db.isCloudConnected() });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Failed to fetch exams" }, { status: 500 });
   }
@@ -27,6 +28,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    await db.syncFromCloud();
     const contentType = req.headers.get("content-type") || "";
 
     // Support both multipart form data (with file attachment) and JSON
@@ -77,6 +79,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      await db.saveChanges();
       const refreshedExam = db.exams.findById(newExam.id);
       return NextResponse.json({ success: true, exam: refreshedExam || newExam, importedCount });
     }
@@ -111,6 +114,7 @@ export async function POST(req: NextRequest) {
       status: status || "active",
     });
 
+    await db.saveChanges();
     return NextResponse.json({ success: true, exam: newExam });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Failed to create exam" }, { status: 500 });

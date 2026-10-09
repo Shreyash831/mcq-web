@@ -4,6 +4,9 @@ import { getStudentSession } from "@/lib/auth";
 import { sanitizeQuestionForStudent, isAttemptExpired, getRemainingSeconds, evaluateAttempt } from "@/lib/exam-engine";
 import { StudentExamSession, SanitizedQuestion } from "@/types";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: NextRequest, { params }: { params: { attemptId: string } }) {
   try {
     const { attemptId } = params;
@@ -12,6 +15,8 @@ export async function GET(req: NextRequest, { params }: { params: { attemptId: s
     if (!session || session.attemptId !== attemptId) {
       return NextResponse.json({ error: "Unauthorized access to this examination attempt." }, { status: 401 });
     }
+
+    await db.syncFromCloud();
 
     const attempt = db.attempts.findById(attemptId);
     if (!attempt) {
@@ -66,6 +71,8 @@ export async function GET(req: NextRequest, { params }: { params: { attemptId: s
           isFlagged: ans.isFlagged,
         });
       });
+
+      await db.saveChanges();
 
       return NextResponse.json({
         isSubmitted: true,

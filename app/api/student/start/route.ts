@@ -4,8 +4,13 @@ import { createStudentToken, STUDENT_COOKIE_NAME } from "@/lib/auth";
 import { shuffleArray, generateOptionMapping } from "@/lib/exam-engine";
 import { OptionMapping } from "@/types";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function POST(req: NextRequest) {
   try {
+    await db.syncFromCloud();
+
     const { name, rollNumber, division, email, examId } = await req.json();
 
     const trimmedName = (name || "").trim();
@@ -124,6 +129,8 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      await db.saveChanges();
+
       // Resume existing in-progress attempt
       const token = await createStudentToken({
         studentId: student.id,
@@ -187,6 +194,8 @@ export async function POST(req: NextRequest) {
       questionOrder: questionIds,
       optionOrderMap,
     });
+
+    await db.saveChanges();
 
     const token = await createStudentToken({
       studentId: student.id,

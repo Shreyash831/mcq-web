@@ -3,12 +3,17 @@ import { db } from "@/lib/db";
 import { getStudentSession, STUDENT_COOKIE_NAME } from "@/lib/auth";
 import { evaluateAttempt } from "@/lib/exam-engine";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getStudentSession(req);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized session" }, { status: 401 });
     }
+
+    await db.syncFromCloud();
 
     const { attemptId } = await req.json();
 
@@ -66,6 +71,8 @@ export async function POST(req: NextRequest) {
         isFlagged: ans.isFlagged,
       });
     });
+
+    await db.saveChanges();
 
     // Clear session cookie so student cannot re-enter active exam mode
     const response = NextResponse.json({

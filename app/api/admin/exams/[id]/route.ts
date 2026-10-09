@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getAdminSession } from "@/lib/auth";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getAdminSession(req);
@@ -9,6 +12,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    await db.syncFromCloud();
     const exam = db.exams.findById(params.id);
     if (!exam) {
       return NextResponse.json({ error: "Exam not found" }, { status: 404 });
@@ -30,6 +34,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    await db.syncFromCloud();
     const body = await req.json();
     const updated = db.exams.update(params.id, {
       title: body.title !== undefined ? body.title.trim() : undefined,
@@ -47,6 +52,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: "Exam not found" }, { status: 404 });
     }
 
+    await db.saveChanges();
     return NextResponse.json({ success: true, exam: updated });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Failed to update exam" }, { status: 500 });
@@ -60,11 +66,13 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    await db.syncFromCloud();
     const deleted = db.exams.delete(params.id);
     if (!deleted) {
       return NextResponse.json({ error: "Exam not found or already deleted" }, { status: 404 });
     }
 
+    await db.saveChanges();
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Failed to delete exam" }, { status: 500 });
