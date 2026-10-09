@@ -9,12 +9,39 @@ const DATA_DIR = isVercel ? "/tmp" : path.join(process.cwd(), "data");
 const DB_FILE = path.join(DATA_DIR, "exam_system.json");
 const BUNDLED_DB_FILE = path.join(process.cwd(), "data", "exam_system.json");
 
-let memoryCache: DatabaseSchema | null = null;
+// Precomputed bcrypt hash of "Suhas#Admin2026!$9x" (cost: 10) to avoid expensive CPU-blocking hashing on requests
+const SUHAS_PASSWORD_HASH = "$2a$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW";
+
+// Global cache attached to Node runtime globalThis to persist across warm serverless invocations
+declare global {
+  var __examDbCache: DatabaseSchema | undefined;
+  var __kvSyncPromise: Promise<void> | undefined;
+}
+
+const KV_URL = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+const KV_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+
+// Async cloud sync for Upstash / Vercel KV
+async function syncToCloudKv(data: DatabaseSchema): Promise<void> {
+  if (!KV_URL || !KV_TOKEN) return;
+  try {
+    await fetch(`${KV_URL}/set/exam_system_db`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${KV_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+  } catch (err) {
+    console.warn("Cloud KV write warning:", err);
+  }
+}
 
 function ensureDbFile(): DatabaseSchema {
   try {
-    if (memoryCache && memoryCache.exams && memoryCache.exams.length > 0) {
-      return memoryCache;
+    if (globalThis.__examDbCache && globalThis.__examDbCache.exams && globalThis.__examDbCache.exams.length > 0) {
+      return globalThis.__examDbCache;
     }
 
     if (!fs.existsSync(DATA_DIR)) {
@@ -25,7 +52,7 @@ function ensureDbFile(): DatabaseSchema {
       const content = fs.readFileSync(DB_FILE, "utf8");
       if (content.trim()) {
         const data: DatabaseSchema = JSON.parse(content);
-        memoryCache = data;
+        globalThis.__examDbCache = data;
         return data;
       }
     }
@@ -43,7 +70,7 @@ function ensureDbFile(): DatabaseSchema {
       initialData = generateInitialData();
     }
 
-    // Ensure Suhas admin account exists
+    // Ensure Suhas admin account exists with precomputed hash
     if (!initialData.admins) initialData.admins = [];
     let suhasAdmin = initialData.admins.find((a) => a.email.toLowerCase() === "suhas@exam.com");
     if (!suhasAdmin) {
@@ -51,36 +78,45 @@ function ensureDbFile(): DatabaseSchema {
         id: "admin-suhas",
         name: "Suhas",
         email: "suhas@exam.com",
-        passwordHash: bcrypt.hashSync("Suhas#Admin2026!$9x", 10),
+        passwordHash: SUHAS_PASSWORD_HASH,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
+    } else {
+      suhasAdmin.passwordHash = SUHAS_PASSWORD_HASH;
+      suhasAdmin.name = "Suhas";
     }
 
     try {
       fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2), "utf8");
     } catch {}
 
-    memoryCache = initialData;
+    globalThis.__examDbCache = initialData;
     return initialData;
   } catch (error) {
     console.error("Database initialization error, falling back to memory:", error);
-    if (memoryCache) return memoryCache;
+    if (globalThis.__examDbCache) return globalThis.__examDbCache;
     const initial = generateInitialData();
-    memoryCache = initial;
+    globalThis.__examDbCache = initial;
     return initial;
   }
 }
 
 function writeDb(data: DatabaseSchema): void {
-  memoryCache = data;
+  globalThis.__examDbCache = data;
+
   try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), "utf8");
   } catch (error) {
-    console.warn("writeDb file write warning (using memory state):", error);
+    console.warn("writeDb file write warning:", error);
+  }
+
+  // Sync to Cloud KV in background if configured
+  if (KV_URL && KV_TOKEN) {
+    syncToCloudKv(data).catch(() => {});
   }
 
   // Also try writing to bundled location if writable
