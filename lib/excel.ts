@@ -23,52 +23,52 @@ export interface ParseResult {
   errorsSummary: string[];
 }
 
-// Pure JS PDF Text Extractor Fallback
+// Fast, Memory-Safe Plain Text Extractor from PDF buffer without heavy regex backtracking
 function extractTextFromPdfBuffer(buffer: Buffer): string {
   try {
-    const raw = buffer.toString("latin1");
-    const textBlocks: string[] = [];
+    // Read up to 5MB slice to prevent heap overflow
+    const maxLen = Math.min(buffer.length, 5 * 1024 * 1024);
+    const raw = buffer.subarray(0, maxLen).toString("latin1");
+    const chunks: string[] = [];
 
-    // Match text objects between BT and ET
-    const btEtRegex = /BT[\s\S]*?ET/g;
-    let match;
-    while ((match = btEtRegex.exec(raw)) !== null) {
-      const block = match[0];
-      // Match string literals inside (...) Tj or [...] TJ
-      const tjRegex = /\((.*?)\)\s*Tj/g;
-      let tjMatch;
-      while ((tjMatch = tjRegex.exec(block)) !== null) {
-        textBlocks.push(tjMatch[1]);
-      }
+    // Fast linear scan for Tj and TJ strings without catastrophic backtracking
+    let pos = 0;
+    while (pos < raw.length) {
+      const openParen = raw.indexOf("(", pos);
+      if (openParen === -1 || openParen > maxLen) break;
+      const closeParen = raw.indexOf(")", openParen);
+      if (closeParen === -1 || closeParen > maxLen) break;
 
-      const tjArrayRegex = /\[(.*?)\]\s*TJ/g;
-      let tjArrayMatch;
-      while ((tjArrayMatch = tjArrayRegex.exec(block)) !== null) {
-        const inner = tjArrayMatch[1];
-        const innerStrings = inner.match(/\((.*?)\)/g);
-        if (innerStrings) {
-          textBlocks.push(innerStrings.map((s) => s.slice(1, -1)).join(""));
-        }
+      const snippet = raw.substring(openParen + 1, closeParen);
+      if (snippet.length > 0 && snippet.length < 500) {
+        chunks.push(snippet);
       }
+      pos = closeParen + 1;
     }
 
-    if (textBlocks.length > 0) {
-      return textBlocks.join("\n");
+    if (chunks.length > 10) {
+      return chunks.join(" ");
     }
 
-    // Secondary fallback: clean plain ASCII text sequences in stream
-    return buffer.toString("utf8").replace(/[^\x20-\x7E\n\r\t]/g, " ");
+    // Fallback: extract clean printable ASCII tokens
+    return buffer
+      .subarray(0, maxLen)
+      .toString("utf8")
+      .replace(/[^\x20-\x7E\n\r\t]/g, " ");
   } catch (err) {
-    return buffer.toString("utf8");
+    return "";
   }
 }
 
-// Parse MCQ Questions from Freeform PDF Text
+// Parse MCQ Questions from Freeform Text with line-by-line linear scan
 export function parseMcqFromText(fullText: string): any[] {
+  if (!fullText) return [];
+
   const lines = fullText
     .split(/\r?\n/)
     .map((l) => l.trim())
-    .filter((l) => l.length > 0);
+    .filter((l) => l.length > 0 && l.length < 2000)
+    .slice(0, 3000); // Safety limit max 3000 lines
 
   const rawQuestions: any[] = [];
   let currentQ: any = null;
@@ -175,19 +175,16 @@ export async function parseAndValidateQuestions(
     if (fileType === "pdf") {
       let pdfText = "";
       try {
-        // Try importing pdf-parse if available
         const pdfParse = (await import("pdf-parse")).default;
-        const pdfData = await pdfParse(buffer);
+        const pdfData = await pdfParse(buffer, { max: 50 });
         pdfText = pdfData.text;
       } catch (pdfErr) {
-        // Fallback pure regex/text stream extractor
         pdfText = extractTextFromPdfBuffer(buffer);
       }
 
       rawRows = parseMcqFromText(pdfText);
 
-      // If text parser didn't match structured pattern, check if PDF contains tabular CSV-like text
-      if (rawRows.length === 0) {
+      if (rawRows.length === 0 && pdfText) {
         const csvFallback = Papa.parse(pdfText, { header: true, skipEmptyLines: "greedy" });
         if (csvFallback.data && csvFallback.data.length > 0) {
           rawRows = csvFallback.data;
@@ -206,7 +203,14 @@ export async function parseAndValidateQuestions(
       });
       rawRows = parseOutput.data;
     } else if (fileType === "xlsx") {
-      const workbook = XLSX.read(buffer, { type: "buffer" });
+      // Use low-memory dense mode for XLSX
+      const workbook = XLSX.read(buffer, {
+        type: "buffer",
+        dense: true,
+        cellDates: false,
+        cellStyles: false,
+        sheetRows: 2000,
+      });
       const firstSheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[firstSheetName];
       const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
