@@ -1,0 +1,34 @@
+1. What is the time complexity of searching in a balanced Binary Search Tree?
+A) O(1)
+B) O(n)
+C) O(log n)
+D) O(n log n)
+Answer: C
+
+2. Which protocol operates on TCP port 443 by default?
+A) HTTP
+B) FTP
+C) HTTPS
+D) SSH
+Answer: C
+
+3. What does CSS stand for in web development?
+A) Computer Style Sheets
+B) Cascading Style Sheets
+C) Creative Sheet System
+D) Colorful Standard Syntax
+Answer: B
+
+4. In SQL, which clause is used to filter aggregated group results?
+A) WHERE
+B) HAVING
+C) ORDER BY
+D) LIMIT
+Answer: B
+
+5. Which HTTP status code represents '201 Created'?
+A) 200
+B) 201
+C) 204
+D) 301
+Answer: B

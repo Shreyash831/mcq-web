@@ -1,0 +1,9 @@
+Question,Option A,Option B,Option C,Option D,Correct Answer
+"Which layer of the OSI model is responsible for routing packets across networks?","Transport Layer","Network Layer","Data Link Layer","Application Layer","B"
+"What is the time complexity of searching in a balanced Binary Search Tree?","O(1)","O(n)","O(log n)","O(n log n)","C"
+"In SQL, which clause is used to group rows having the same values into summary rows?","ORDER BY","HAVING","GROUP BY","WHERE","C"
+"Which HTTP method is idempotent and used to replace or update an existing resource?","POST","PUT","PATCH","CONNECT","B"
+"What is the result of typeof NaN in JavaScript?","number","NaN","undefined","object","A"
+"Which data structure follows the First In First Out (FIFO) principle?","Stack","Queue","Priority Queue","Tree","B"
+"What is the primary function of a database foreign key?","Enforce referential integrity","Improve indexing speed","Encrypt table rows","Prevent NULL values","A"
+"Which CSS unit is relative to the font-size of the root element?","em","rem","vh","px","B"

@@ -1,0 +1,54 @@
+{
+  "admins": [
+    {
+      "id": "admin-suhas",
+      "name": "Suhas",
+      "email": "suhas@exam.com",
+      "passwordHash": "$2a$10$ksKy35Tnvhetd2VkOzCn2etuiBHuwAo/dN1e56Hbkd2RhZbISNeZG",
+      "createdAt": "2026-10-08T18:10:00.000Z",
+      "updatedAt": "2026-10-08T18:10:00.000Z"
+    }
+  ],
+  "students": [
+    {
+      "id": "stu-1",
+      "name": "Rahul Patil",
+      "rollNumber": "23",
+      "division": "A",
+      "email": "rahul.patil@school.edu",
+      "createdAt": "2026-10-08T17:50:26.094Z",
+      "updatedAt": "2026-10-08T17:50:26.094Z"
+    },
+    {
+      "id": "stu-2",
+      "name": "Priya Sharma",
+      "rollNumber": "15",
+      "division": "A",
+      "email": "priya.sharma@school.edu",
+      "createdAt": "2026-10-08T17:50:26.094Z",
+      "updatedAt": "2026-10-08T17:50:26.094Z"
+    },
+    {
+      "id": "stu-3",
+      "name": "Amit Deshmukh",
+      "rollNumber": "42",
+      "division": "B",
+      "email": "amit.deshmukh@school.edu",
+      "createdAt": "2026-10-08T17:50:26.094Z",
+      "updatedAt": "2026-10-08T17:50:26.094Z"
+    },
+    {
+      "id": "stu-4",
+      "name": "Sneha Kulkarni",
+      "rollNumber": "08",
+      "division": "A",
+      "email": "sneha.k@school.edu",
+      "createdAt": "2026-10-08T17:50:26.094Z",
+      "updatedAt": "2026-10-08T17:50:26.094Z"
+    }
+  ],
+  "exams": [],
+  "questions": [],
+  "examAttempts": [],
+  "studentAnswers": []
+}

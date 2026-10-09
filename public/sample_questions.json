@@ -1,0 +1,26 @@
+[
+  {
+    "questionText": "Which protocol operates on TCP port 443 by default?",
+    "optionA": "HTTP",
+    "optionB": "FTP",
+    "optionC": "HTTPS",
+    "optionD": "SSH",
+    "correctAnswer": "C"
+  },
+  {
+    "questionText": "What does CSS stand for in web development?",
+    "optionA": "Computer Style Sheets",
+    "optionB": "Cascading Style Sheets",
+    "optionC": "Creative Sheet System",
+    "optionD": "Colorful Standard Syntax",
+    "correctAnswer": "B"
+  },
+  {
+    "questionText": "In React, what hook is used to perform side effects in functional components?",
+    "optionA": "useState",
+    "optionB": "useContext",
+    "optionC": "useMemo",
+    "optionD": "useEffect",
+    "correctAnswer": "D"
+  }
+]
